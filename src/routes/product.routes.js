@@ -15,9 +15,9 @@ const router = Router();
 router.get("/", getApprovedProducts);
 router.get("/:id", getProductDetails); // 🌟 Single Product Details API
 
-// Authenticated Seller Routes (Require Admin Approval)
-router.post("/", protect, uploadProductImage.single("image"), requestAddProduct);
-router.put("/:id", protect, uploadProductImage.single("image"), requestUpdateProduct);
+// Authenticated Seller  Routes (Require Admin Approval)
+router.post("/", protect, uploadProductImage, requestAddProduct);
+router.put("/:id", protect, uploadProductImage, requestUpdateProduct);
 router.delete("/:id", protect, requestDeleteProduct);
 
 export default router;

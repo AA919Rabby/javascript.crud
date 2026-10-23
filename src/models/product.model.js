@@ -15,34 +15,37 @@ const productSchema = new mongoose.Schema(
         price: {
             type: Number,
             required: [true, "Price is required"],
+            min: 0,
         },
         stock: {
             type: Number,
             required: [true, "Stock is required"],
+            min: 0,
         },
         category: {
             type: String,
             required: [true, "Category is required"],
             trim: true,
         },
-        image: {
-            type: String,
-            required: [true, "Image is required"],
+        // 🌟 MULTIPLE IMAGES SUPPORT (Array of image paths)
+        images: {
+            type: [String],
+            required: [true, "At least one product image is required"],
+            validate: [(arr) => arr.length > 0, "At least one product image is required"],
         },
         seller: {
             type: mongoose.Schema.Types.ObjectId,
             ref: "User",
-            required: true
+            required: true,
         },
         status: {
             type: String,
             enum: ["APPROVED", "PENDING_CREATION", "PENDING_UPDATE", "PENDING_DELETION", "REJECTED"],
             default: "PENDING_CREATION",
-            index: true
         },
         rejectionReason: {
             type: String,
-            default: ""
+            default: "",
         },
         pendingEdits: {
             title: String,
@@ -50,40 +53,19 @@ const productSchema = new mongoose.Schema(
             price: Number,
             stock: Number,
             category: String,
-            image: String,
+            images: [String],
         },
         reviews: [
             {
-                user: {
-                    type: mongoose.Schema.Types.ObjectId,
-                    ref: "User",
-                    required: true,
-                },
-                comment: {
-                    type: String,
-                    required: true,
-                    trim: true,
-                },
-                rating: {
-                    type: Number,
-                    required: true,
-                    min: 1,
-                    max: 5,
-                },
-                createdAt: {
-                    type: Date,
-                    default: Date.now,
-                },
+                user: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
+                comment: { type: String, required: true },
+                rating: { type: Number, required: true, min: 1, max: 5 },
+                createdAt: { type: Date, default: Date.now },
             },
         ],
         rating: {
             type: Number,
             default: 0,
-        },
-        image: {
-            type: String,
-            required: [true, "Image is required"],
-            default: "",
         },
     },
     { timestamps: true }
