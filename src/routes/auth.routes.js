@@ -21,6 +21,10 @@ import {
     createBlogSchema,
     verifyResetOtpSchema,
 } from "../middlewares/validate.middleware.js";
+import {
+    googleSignIn,
+    appleSignIn,
+} from "../controllers/socialAuth.controller.js";
 
 
 
@@ -28,6 +32,9 @@ const router = Router();
 
 
 router.use(authLimiter);
+
+router.post("/google", googleSignIn);
+router.post("/apple", appleSignIn);
 
 router.post("/register", validate(registerSchema), register);
 router.post("/verify-registration-otp", validate(verifyOtpSchema), verifyRegistrationOtp);

@@ -16,12 +16,21 @@ const userSchema = new mongoose.Schema(
         },
         password: {
             type: String,
-            required: [true, "Password is required"],
+            required: function () {
+                return this.authProvider === "local";
+            },
         },
         avatar: {
             type: String,
             default: ""
         },
+        authProvider: {
+            type: String,
+            enum: ["LOCAL", "GOOGLE", "APPLE"],
+            default: "LOCAL"
+        },
+        googleId: { type: String, default: "" },
+        appleId: { type: String, default: "" },
         role: {
             type: String,
             enum: ["ADMIN", "USER"],

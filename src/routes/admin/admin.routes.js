@@ -1,9 +1,5 @@
 import { Router } from "express";
 import {
-    getPendingOrders,
-    approveOrder
-} from "../../controllers/admin/admin.controller.js";
-import {
     adminLogin,
     getAllUsers,
     toggleBlockUser,
@@ -17,23 +13,24 @@ import {
     rejectProduct,
 } from "../../controllers/admin/admin.controller.js";
 import { requireAdmin } from "../../middlewares/admin.middleware.js";
-import { uploadProductImage } from "../../middlewares/productUpload.middleware.js";
+import { uploadProductImages } from "../../middlewares/productUpload.middleware.js";
 
 const router = Router();
 
-// 🌟 MUST BE "/login", NOT "/admin/login":
+// Public Admin Login
 router.post("/login", adminLogin);
 
-// Protected Admin Routes (Require Bearer adminToken)
+// 🛡️ Protected Admin Routes
 router.use(requireAdmin);
 
+// User Management
 router.get("/users", getAllUsers);
 router.patch("/users/:id/block", toggleBlockUser);
 router.patch("/users/:id/ban", toggleBanUser);
 
-// Products Management
-router.post("/products", uploadProductImage.single("image"), addProduct);
-router.put("/products/:id", uploadProductImage.single("image"), updateProduct);
+// 🌟 Products Management (Uses uploadProductImages directly - NO .single()!)
+router.post("/products", uploadProductImages, addProduct);
+router.put("/products/:id", uploadProductImages, updateProduct);
 router.get("/products", getProducts);
 router.delete("/products/:id", deleteProduct);
 
@@ -41,11 +38,5 @@ router.delete("/products/:id", deleteProduct);
 router.get("/products/pending", getPendingProducts);
 router.patch("/products/:id/approve", approveProduct);
 router.patch("/products/:id/reject", rejectProduct);
-
-//admin orders routes
-router.get("/orders/pending", getPendingOrders);
-router.patch("/orders/:id/approve", approveOrder);
-
-
 
 export default router;
