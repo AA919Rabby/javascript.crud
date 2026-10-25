@@ -10,6 +10,7 @@ export const connectDB = async () => {
             throw new Error("No Mongo URI found");
         }
         const conn = await mongoose.connect(uri, {
+            maxPoolSize: 50,
             serverSelectionTimeoutMS: 5000,
         });
         console.log("=======================");

@@ -2,67 +2,78 @@ import dotenv from "dotenv";
 dotenv.config();
 
 import http from "node:http";
+import express from "express";
 import { Server as SocketIOServer } from "socket.io";
 import jwt from "jsonwebtoken";
-import app from "./app.js";
+import { createClient } from "redis";
+import { createAdapter } from "@socket.io/redis-adapter"; // Fixed typo!
+import { createApp } from "./app.js";
 import { connectDB } from "./config/db.js";
 
 const PORT = process.env.PORT || 5000;
 
-// 1. Create HTTP Server
-const httpServer = http.createServer(app);
+// 1. Create base HTTP Server
+const tempApp = express();
+const httpServer = http.createServer(tempApp);
 
 // 2. Initialize Socket.IO Server with CORS
 export const io = new SocketIOServer(httpServer, {
     cors: {
-        origin: "*", // In production, specify your frontend URL
-        methods: ["GET", "POST"],
+        origin: "*",
+        methods: ["GET", "POST", "PUT", "DELETE"],
     },
+    transports: ["websocket"],
 });
 
-// 3. Inject `io` into every Express `req` so controllers can broadcast events!
-app.use((req, _res, next) => {
-    req.io = io;
-    next();
-});
+// 3. 🌟 CONNECT REDIS ADAPTER (Synchronizes all 3 nodes!):
+if (process.env.REDIS_URL) {
+    try {
+        const pubClient = createClient({ url: process.env.REDIS_URL });
+        const subClient = pubClient.duplicate();
 
-// 4. WebSocket Connection & Room Management
+        await Promise.all([pubClient.connect(), subClient.connect()]);
+        io.adapter(createAdapter(pubClient, subClient));
+        console.log("⚡ [Redis Adapter]: Connected! All 3 Nodes are synchronized!");
+    } catch (err) {
+        console.warn("⚠️ Redis connection failed, falling back to in-memory:", err.message);
+    }
+}
+
+// 4. Build Express App with `io` injected:
+const app = createApp(io);
+httpServer.on("request", app);
+
+// 5. WebSocket Connection & Room Management
 io.on("connection", (socket) => {
-    console.log(`⚡ [WebSocket Connected]: ${socket.id}`);
+    console.log(`⚡ [WebSocket Connected on Node ${process.env.NODE_APP_INSTANCE || 0}]: ${socket.id}`);
 
-    // 🌟 Authentication Event: Client joins their private room or admin room
     socket.on("authenticate", (token) => {
         try {
             const secret = process.env.JWT_SECRET || "super_secret_jwt_key_production_2026_xyz";
             const decoded = jwt.verify(token, secret);
 
-            // Join user's private personal room
             socket.join(`user_${decoded.id}`);
-            console.log(`👤 User joined private room: user_${decoded.id}`);
-
-            // If user is Admin, join the privileged admin room!
             if (decoded.role === "ADMIN") {
                 socket.join("admin_room");
-                console.log(`👑 Admin joined privileged room: admin_room`);
             }
 
-            socket.emit("authenticated", { success: true, message: "Connected to real-time updates!" });
+            socket.emit("authenticated", { success: true, message: "Connected to real-time cluster!" });
         } catch (err) {
-            socket.emit("auth_error", { message: "Invalid token for WebSocket connection" });
+            socket.emit("auth_error", { message: "Invalid or expired token" });
         }
     });
 
     socket.on("disconnect", () => {
-        console.log(`🔌 [WebSocket Disconnected]: ${socket.id}`);
+        console.log(`🔌 [Socket Disconnected]: ${socket.id}`);
     });
 });
 
-// 5. Connect Database & Start Server
+// 6. Connect Database & Start Server
 connectDB().then(() => {
     httpServer.listen(PORT, () => {
         console.log(`====================================================`);
-        console.log(`🚀 Production Server running on http://localhost:${PORT}`);
-        console.log(`⚡ WebSocket Server active on ws://localhost:${PORT}`);
+        console.log(`🚀 Node.js Worker #${process.env.NODE_APP_INSTANCE || 0} running on port ${PORT}`);
+        console.log(`⚡ WebSocket active on ws://localhost:${PORT}`);
         console.log(`====================================================`);
     });
 });
